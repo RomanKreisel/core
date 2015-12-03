@@ -58,6 +58,9 @@ $this->create('files_external_oauth2', 'ajax/oauth2.php')
 $this->create('files_external_list_applicable', '/applicable')
 	->actionInclude('files_external/ajax/applicable.php');
 
+$this->create('files_external_ajax_dialog', 'ajax/dialog.php')
+    ->actionInclude('files_external/ajax/dialog.php');
+
 \OCP\API::register('get',
 		'/apps/files_external/api/v1/mounts',
 		array('\OCA\Files\External\Api', 'getUserMounts'),

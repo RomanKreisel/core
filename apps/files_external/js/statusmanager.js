@@ -166,7 +166,7 @@ OCA.External.StatusManager = {
 	manageMountPointError : function(name) {
 		var self = this;
 		this.getMountStatus($.proxy(function(allMountStatus) {
-			if (typeof allMountStatus[name] !== 'undefined' || allMountStatus[name].status === 1) {
+			if (typeof allMountStatus[name] !== 'undefined' || allMountStatus[name].status > 0 && allMountStatus[name].status < 7) {
 				var mountData = allMountStatus[name];
 				if (mountData.type === "system") {
 					OC.dialogs.confirm(t('files_external', 'There was an error with message: ') + mountData.error + '. Do you want to review mount point config in admin settings page?', t('files_external', 'External mount error'), function(e){
@@ -175,11 +175,17 @@ OCA.External.StatusManager = {
 						}
 					});
 				} else {
-					OC.dialogs.confirm(t('files_external', 'There was an error with message: ') + mountData.error + '. Do you want to review mount point config in personal settings page?', t('files_external', 'External mount error'), function(e){
-						if(e === true) {
-							window.location.href = OC.generateUrl('/settings/personal#external-storage');
-						}
-					});
+					if(allMountStatus[name].status === 4){
+						// personal mount whit credentials problems
+						this.showCredentialsDialog(name, mountData, 'updatePersonalMountPoint.php');
+
+					} else{
+						OC.dialogs.confirm(t('files_external', 'There was an error with message: ') + mountData.error + '. Do you want to review mount point config in personal settings page?', t('files_external', 'External mount error'), function(e){
+							if(e === true) {
+								window.location.href = OC.generateUrl('/settings/personal#' + t('files_external', 'goto-external-storage'));
+							}
+						});
+					}
 				}
 			}
 		}, this));
@@ -355,7 +361,78 @@ OCA.External.StatusManager = {
 
 		self.processMountList(mountListData);
 		self.launchPartialConnectivityCheck(mountListData, recheck);
-	}
+	},
+
+	/**
+	 * Function to display custom dialog to enter credentials
+	 * @param mountPoint
+	 * @param mountData
+	 * @param extraParams
+	 * @param target
+	 * @param extraInfo
+	 */
+    showCredentialsDialog : function(mountPoint, mountData, target) {
+        var self = this;
+        var baseParams = {target: target,
+                            m: mountData.mid,
+                            name: mountPoint,
+                            url: mountData.url,
+                            share: mountData.share};
+
+        $.get(OC.filePath('files_external', 'ajax', 'dialog.php'),
+                baseParams,
+                function(data) {
+                    if (typeof data.status !== 'undefined' && data.status === 'success') {
+                        $('body').append(data.form);
+                        var send_button_click_func = function () {
+                            $('.oc-dialog-close').hide();
+                            var dataToSend = {};
+                            $('#files_external_div_form').find('input').each(function(){
+                                var thisElement = $(this);
+                                if (thisElement.is('[type="checkbox"]')) {
+                                    dataToSend[thisElement.attr('name')] = thisElement.prop('checked');
+                                } else {
+                                    dataToSend[thisElement.attr('name')] = thisElement.val();
+                                }
+                            });
+                            /* Ajax call to save credentials */
+                            $.ajax({type: 'POST',
+                                url: $('#files_external_div_form form').attr('action'),
+                                data: dataToSend,
+                                success: function (data) {
+                                    var dialog = $('#files_external_div_form');
+                                    if (typeof(data.status) !== 'undefined' && data.status === 'success') {
+                                        dialog.ocdialog('close');
+                                    	/* Trigger status check again */
+                                    	OCA.External.StatusManager.recheckConnectivityForMount("test", true);
+                                    } else {
+                                        $('.oc-dialog-close').show();
+                                        dialog.ocdialog('option', 'title', 'Credentials saving failed');
+                                        var title = $('.oc-dialog-title');
+                                        var color = title.css('background-color');
+                                        title.css('background-color', 'red');
+                                        title.animate({backgroundColor: color}, 5000);
+                                    }
+                                },
+                                error: function (){
+                                    $('.oc-dialog-close').show();
+                                }});
+                        };
+
+                        var buttonList = [{text : t('files_external', 'Save'),
+                                            click : send_button_click_func,
+                                            closeOnEscape : true}];
+
+                        var ocdialogParams = {modal: true, buttons : buttonList,
+                                                closeOnExcape : true};
+
+                        $('#files_external_div_form').ocdialog(ocdialogParams)
+                                        .bind('ocdialogclose', function(){
+                                            $('#files_external_div_form').ocdialog('destroy').remove();
+                                        });
+                    }
+                });
+    }
 };
 
 OCA.External.StatusManager.Utils = {
