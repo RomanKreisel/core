@@ -61,6 +61,9 @@ $this->create('files_external_list_applicable', '/applicable')
 $this->create('files_external_ajax_dialog', 'ajax/dialog.php')
     ->actionInclude('files_external/ajax/dialog.php');
 
+$this->create('files_external_ajax_fakesavecredentials', 'ajax/fakesavecredentials.php')
+    ->actionInclude('files_external/ajax/fakesavecredentials.php');
+
 \OCP\API::register('get',
 		'/apps/files_external/api/v1/mounts',
 		array('\OCA\Files\External\Api', 'getUserMounts'),

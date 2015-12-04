@@ -6,6 +6,9 @@
  * @author Jesus Macias Portela <jesus@owncloud.com>
  * @copyright (C) 2014 ownCloud, Inc.
  *
+ * @copyright Copyright (c) 2015, ownCloud, Inc.
+ * @license AGPL-3.0
+ *
  * This code is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
  * as published by the Free Software Foundation.
@@ -19,15 +22,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  */
+
+OCP\JSON::checkAppEnabled('files_external');
+OCP\JSON::checkLoggedIn();
+OCP\JSON::callCheck();
+
+$l = OC_L10N::get('files_external');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        exit();
+    }
+
+OCP\JSON::success(array("status" => "sucess", "response"=>array("id"=>$_POST['id'], "type"=>$_POST['type'], "name"=>$_POST['name'])));
+
 ?>
-<div id="files_external_div_form" title="<?php p($l->t('Credentials validation')) ?>" style="text-align:center;">
-  <div>
-    <span><?php echo $_['spanText'] ?></span>
-    <br/>
-    <span><?php p($l->t('Share: %s', $_['name'])) ?></span>
-    <form method="post" action="<?php p($_['actionUrl']) ?>">
-      <input type="text" name="username" placeholder="<?php p($l->t('Username')) ?>"/>
-      <input type="password" name="password" placeholder="<?php p($l->t('Password')) ?>"/>
-    </form>
-  </div>
-</div>

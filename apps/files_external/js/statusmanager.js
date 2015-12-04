@@ -86,10 +86,12 @@ OCA.External.StatusManager = {
 							// failure response with error message
 							self.mountStatus[mountData.mount_point] = { type: mountData.type,
 																		status: 1,
+																		id: mountData.id,
 																		error: response.statusMessage};
 						} else {
 							self.mountStatus[mountData.mount_point] = { type: mountData.type,
 																		status: 1,
+																		id: mountData.id,
 																		error: t('files_external', 'Empty response from the server')};
 						}
 					}
@@ -177,7 +179,7 @@ OCA.External.StatusManager = {
 				} else {
 					if(allMountStatus[name].status === 4){
 						// personal mount whit credentials problems
-						this.showCredentialsDialog(name, mountData, 'updatePersonalMountPoint.php');
+						this.showCredentialsDialog(name, mountData, 'fakesavecredentials.php');
 
 					} else{
 						OC.dialogs.confirm(t('files_external', 'There was an error with message: ') + mountData.error + '. Do you want to review mount point config in personal settings page?', t('files_external', 'External mount error'), function(e){
@@ -336,8 +338,6 @@ OCA.External.StatusManager = {
 
 		var self = this;
 		var mountListData = [];
-		var recheckPersonalGlobal = false;
-		var recheckAdminGlobal = false;
 
 		if (!self.mountStatus) {
 			self.mountStatus = {};
@@ -374,10 +374,7 @@ OCA.External.StatusManager = {
     showCredentialsDialog : function(mountPoint, mountData, target) {
         var self = this;
         var baseParams = {target: target,
-                            m: mountData.mid,
-                            name: mountPoint,
-                            url: mountData.url,
-                            share: mountData.share};
+                          name: mountPoint};
 
         $.get(OC.filePath('files_external', 'ajax', 'dialog.php'),
                 baseParams,
@@ -395,6 +392,9 @@ OCA.External.StatusManager = {
                                     dataToSend[thisElement.attr('name')] = thisElement.val();
                                 }
                             });
+                            dataToSend['name'] = mountPoint;
+                            dataToSend['type'] = mountData.type;
+                            dataToSend['id'] = mountData.id;
                             /* Ajax call to save credentials */
                             $.ajax({type: 'POST',
                                 url: $('#files_external_div_form form').attr('action'),
@@ -404,7 +404,7 @@ OCA.External.StatusManager = {
                                     if (typeof(data.status) !== 'undefined' && data.status === 'success') {
                                         dialog.ocdialog('close');
                                     	/* Trigger status check again */
-                                    	OCA.External.StatusManager.recheckConnectivityForMount("test", true);
+                                    	OCA.External.StatusManager.recheckConnectivityForMount({'name': data.response.name}, true);
                                     } else {
                                         $('.oc-dialog-close').show();
                                         dialog.ocdialog('option', 'title', 'Credentials saving failed');

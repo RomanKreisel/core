@@ -36,14 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     /* Check mandatory params */
-    $id_username = OC_Util::sanitizeHTML($_GET['iduser']);
-    $id_password = OC_Util::sanitizeHTML($_GET['idpass']);
-    $id_mount = OC_Util::sanitizeHTML($_GET['idmount']);
+    $name = OC_Util::sanitizeHTML($_GET['name']);
     $actionUrl = OCP\Util::linkTo('files_external', 'ajax/' . $target);
-    $mountPoint = $_GET["m"];
-    $folder = $_GET['name'];
-    $smburl = $_GET['url'];
-    $smbshare = $_GET['share'];
 
     // we'll need a bit of special processing here: replace "\n\n" into "<br/>" and surround
     // the folder name with html tags
@@ -54,11 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $tmpl = new OCP\Template('files_external', 'credentialsDialog');
     $tmpl->assign('spanText', $spanText);
-    $tmpl->assign('service', $smburl);
-    $tmpl->assign('share', $smbshare);
     $tmpl->assign('actionUrl', $actionUrl);
-    $tmpl->assign('id_username', $id_username);
-    $tmpl->assign('id_password', $id_password);
+
 
     OCP\JSON::success(array("form" => $tmpl->fetchPage()));
 }
