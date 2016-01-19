@@ -24,6 +24,7 @@ namespace OCA\DAV\Comments;
 use OCP\Comments\ICommentsManager;
 use OCP\Files\Folder;
 use Sabre\DAV\Exception\MethodNotAllowed;
+use Sabre\DAV\Exception\NotFound;
 
 /**
  * Class EntityCollection
@@ -76,9 +77,15 @@ class EntityCollection extends Collection {
 	 *
 	 * @param string $name
 	 * @return \Sabre\DAV\INode
+	 * @throws NotFound
 	 */
 	function getChild($name) {
-		// TODO: return comment by id (referred to by $name)
+		try {
+			$comment = $this->commentsManager->get($name);
+			return new CommentNode($this->commentsManager, $comment);
+		} catch (\OCP\Comments\NotFoundException $e) {
+			throw new NotFound();
+		}
 	}
 
 	/**
@@ -88,7 +95,12 @@ class EntityCollection extends Collection {
 	 * @throws MethodNotAllowed
 	 */
 	function getChildren() {
-		// TODO: if necessary, return  all Comments belonging to this entity
+		$comments = $this->commentsManager->getForObject($this->name, $this->id);
+		$result = [];
+		foreach($comments as $comment) {
+			$result[] = new CommentNode($this->commentsManager, $comment);
+		}
+		return $result;
 	}
 
 	/**
