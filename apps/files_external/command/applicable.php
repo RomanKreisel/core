@@ -96,7 +96,7 @@ class Applicable extends Base {
 
 		if ($add || $remove) {
 			$applicables = array_unique(array_merge($applicables, $add));
-			$applicables = array_diff($applicables, $remove);
+			$applicables = array_values(array_diff($applicables, $remove));
 			if ($type === 'users') {
 				$mount->setApplicableUsers($applicables);
 			} else {
