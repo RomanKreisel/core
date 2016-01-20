@@ -81,7 +81,7 @@ class Applicable extends Base {
 		}
 
 		if ($type !== 'users' && $type !== 'groups') {
-			$output->writeln('<error>Invalid applicable type "' . $type . '"</error>');
+			$output->writeln('<error>Invalid applicable type "' . $type . '" (valid options are "users" and "groups")</error>');
 			return 1;
 		}
 
