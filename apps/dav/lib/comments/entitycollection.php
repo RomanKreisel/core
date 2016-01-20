@@ -92,10 +92,22 @@ class EntityCollection extends Collection {
 	 * Returns an array with all the child nodes
 	 *
 	 * @return \Sabre\DAV\INode[]
-	 * @throws MethodNotAllowed
 	 */
 	function getChildren() {
-		$comments = $this->commentsManager->getForObject($this->name, $this->id);
+		return $this->findChildren();
+	}
+
+	/**
+	 * Returns an array of comment nodes. Result can be influenced by offset,
+	 * limit and date time parameters.
+	 *
+	 * @param int $limit
+	 * @param int $offset
+	 * @param \DateTime|null $datetime
+	 * @return CommentNode[]
+	 */
+	function findChildren($limit = 0, $offset = 0, \DateTime $datetime = null) {
+		$comments = $this->commentsManager->getForObject($this->name, $this->id, $limit, $offset, $datetime);
 		$result = [];
 		foreach($comments as $comment) {
 			$result[] = new CommentNode($this->commentsManager, $comment);

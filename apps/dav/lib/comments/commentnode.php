@@ -25,8 +25,11 @@ namespace OCA\DAV\Comments;
 use OCP\Comments\IComment;
 use OCP\Comments\ICommentsManager;
 use Sabre\DAV\Exception\MethodNotAllowed;
+use Sabre\Xml\Writer;
+use Sabre\Xml\XmlSerializable;
 
-class CommentNode implements \Sabre\DAV\INode {
+class CommentNode implements \Sabre\DAV\INode, XmlSerializable {
+	const NS_OWNCLOUD = 'http://owncloud.org/ns';
 
 	/** @var ICommentsManager */
 	protected $commentsManager;
@@ -77,5 +80,45 @@ class CommentNode implements \Sabre\DAV\INode {
 	function getLastModified() {
 		// FIXME: Figure out whether this can be an issue with comment updates
 		return $this->comment->getCreationDateTime();
+	}
+
+	/**
+	 * The xmlSerialize method is called during xml writing.
+	 *
+	 * Use the $writer argument to write its own xml serialization.
+	 *
+	 * An important note: do _not_ create a parent element. Any element
+	 * implementing XmlSerializble should only ever write what's considered
+	 * its 'inner xml'.
+	 *
+	 * The parent of the current element is responsible for writing a
+	 * containing element.
+	 *
+	 * This allows serializers to be re-used for different element names.
+	 *
+	 * If you are opening new elements, you must also close them again.
+	 *
+	 * @param Writer $writer
+	 * @return void
+	 */
+	function xmlSerialize(Writer $writer) {
+		$ns = '{' . self::NS_OWNCLOUD . '}';
+		$writer->startElement($ns . 'comment');
+
+		//$writer->writeElement($ns . ':href', );	TODO: determine and return URL to this comment
+		$writer->writeElement($ns . 'id', $this->comment->getId());
+		$writer->writeElement($ns . 'parentId', $this->comment->getParentId());
+		$writer->writeElement($ns . 'topmostParentId', $this->comment->getTopmostParentId());
+		$writer->writeElement($ns . 'childrenCount', $this->comment->getChildrenCount());
+		$writer->writeElement($ns . 'message', $this->comment->getMessage());
+		$writer->writeElement($ns . 'verb', $this->comment->getVerb());
+		$writer->writeElement($ns . 'actorType', $this->comment->getActorType());
+		$writer->writeElement($ns . 'actorId', $this->comment->getActorId());
+		$writer->writeElement($ns . 'objectType', $this->comment->getObjectType());
+		$writer->writeElement($ns . 'objectId', $this->comment->getObjectId());
+		$writer->writeElement($ns . 'creationDateTime', $this->comment->getCreationDateTime()->format('Y-m-d H:m:i'));
+		$writer->writeElement($ns . 'latestChildDateTime', $this->comment->getLatestChildDateTime()->format('Y-m-d H:m:i'));
+
+		$writer->endElement();
 	}
 }

@@ -25,10 +25,12 @@ use OCP\Comments\IComment;
 use OCP\Comments\ICommentsManager;
 use OCP\IUserSession;
 use Sabre\DAV\Exception\BadRequest;
+use Sabre\DAV\Exception\ReportNotSupported;
 use Sabre\DAV\Exception\UnsupportedMediaType;
 use Sabre\DAV\Exception\NotFound;
 use Sabre\DAV\Server;
 use Sabre\DAV\ServerPlugin;
+use Sabre\DAV\Xml\Response\MultiStatus;
 use Sabre\HTTP\RequestInterface;
 use Sabre\HTTP\ResponseInterface;
 
@@ -39,6 +41,10 @@ class CommentsPlugin extends ServerPlugin {
 	// namespace
 	const NS_OWNCLOUD = 'http://owncloud.org/ns';
 	const ID_PROPERTYNAME = '{http://owncloud.org/ns}id';
+
+	const REPORT_PARAM_LIMIT     = '{http://owncloud.org/ns}limit';
+	const REPORT_PARAM_OFFSET    = '{http://owncloud.org/ns}offset';
+	const REPORT_PARAM_TIMESTAMP = '{http://owncloud.org/ns}datetime';
 
 	/** @var ICommentsManager  */
 	protected $commentsManager;
@@ -76,6 +82,7 @@ class CommentsPlugin extends ServerPlugin {
 
 		$server->protectedProperties[] = self::ID_PROPERTYNAME;
 
+		$server->on('report', [$this, 'onReport']);
 		$server->on('method:POST', [$this, 'httpPost']);
 
 		$this->server = $server;
@@ -110,6 +117,54 @@ class CommentsPlugin extends ServerPlugin {
 			$response->setStatus(201);
 			return false;
 		}
+	}
+
+	/**
+	 * REPORT operations to look for comments
+	 *
+	 * @param string $reportName
+	 * @param $report
+	 * @param $uri
+	 * @return bool
+	 * @throws NotFound
+	 * @throws ReportNotSupported
+	 */
+	public function onReport($reportName, $report, $uri) {
+		$node = $this->server->tree->getNodeForPath($uri);
+		if(!$node instanceof EntityCollection) {
+			throw new ReportNotSupported();
+		}
+		$args = ['limit' => 0, 'offset' => 0, 'datetime' => null];
+		$acceptableParameters = [
+			$this::REPORT_PARAM_LIMIT,
+			$this::REPORT_PARAM_OFFSET,
+			$this::REPORT_PARAM_TIMESTAMP
+		];
+		$ns = '{' . $this::NS_OWNCLOUD . '}';
+		foreach($report as $parameter) {
+			if(!in_array($parameter['name'], $acceptableParameters)) {
+				continue;
+			}
+			$args[str_replace($ns, '', $parameter['name'])] = $parameter['value'];
+		}
+
+		if(!is_null($args['datetime'])) {
+			$args['datetime'] = new \DateTime($args['datetime']);
+		}
+
+		$result = $node->findChildren($args['limit'], $args['offset'], $args['datetime']);
+
+		$this->server->httpResponse->setStatus(207);
+		$this->server->httpResponse->setHeader('Content-Type', 'application/xml; charset=utf-8');
+
+		$xml = $this->server->xml->write(
+			'{DAV:}multistatus',
+			new MultiStatus($result),
+			$this->server->getBaseUri()
+		);
+		$this->server->httpResponse->setBody($xml);
+
+		return false;
 	}
 
 	/**
