@@ -25,21 +25,34 @@ namespace OCA\DAV\Comments;
 use OCP\Comments\IComment;
 use OCP\Comments\ICommentsManager;
 use Sabre\DAV\Exception\MethodNotAllowed;
+use Sabre\DAV\PropPatch;
 use Sabre\Xml\Writer;
 use Sabre\Xml\XmlSerializable;
 
-class CommentNode implements \Sabre\DAV\INode, XmlSerializable {
+class CommentNode implements \Sabre\DAV\INode, XmlSerializable,\Sabre\DAV\IProperties {
 	const NS_OWNCLOUD = 'http://owncloud.org/ns';
 
 	/** @var ICommentsManager */
 	protected $commentsManager;
 
 	/** @var  IComment */
-	protected $comment;
+	public $comment;
+
+	/** @var array list of properties with key being their name and value their setter */
+	protected $properties = [];
 
 	public function __construct(ICommentsManager $commentsManager, IComment $comment) {
 		$this->commentsManager = $commentsManager;
 		$this->comment = $comment;
+
+		$methods = get_class_methods($this->comment);
+		$methods = array_filter($methods, function($name){
+			return strpos($name, 'get') === 0;
+		});
+		foreach($methods as $getter) {
+			$name = '{'.self::NS_OWNCLOUD.'}' . lcfirst(substr($getter, 3));
+			$this->properties[$name] = $getter;
+		}
 	}
 
 	/**
@@ -120,5 +133,64 @@ class CommentNode implements \Sabre\DAV\INode, XmlSerializable {
 		$writer->writeElement($ns . 'latestChildDateTime', $this->comment->getLatestChildDateTime()->format('Y-m-d H:m:i'));
 
 		$writer->endElement();
+	}
+
+	/**
+	 * Updates properties on this node.
+	 *
+	 * This method received a PropPatch object, which contains all the
+	 * information about the update.
+	 *
+	 * To update specific properties, call the 'handle' method on this object.
+	 * Read the PropPatch documentation for more information.
+	 *
+	 * @param PropPatch $propPatch
+	 * @return void
+	 */
+	function propPatch(PropPatch $propPatch) {
+		// TODO: Implement propPatch() method.
+	}
+
+	/**
+	 * Returns a list of properties for this nodes.
+	 *
+	 * The properties list is a list of propertynames the client requested,
+	 * encoded in clark-notation {xmlnamespace}tagname
+	 *
+	 * If the array is empty, it means 'all properties' were requested.
+	 *
+	 * Note that it's fine to liberally give properties back, instead of
+	 * conforming to the list of requested properties.
+	 * The Server class will filter out the extra.
+	 *
+	 * @param array $properties
+	 * @return array
+	 */
+	function getProperties($properties) {
+		$ns = '{' . self::NS_OWNCLOUD . '}';
+
+		//pre-check.
+		//when requiring all properties, file-related stuff ends up here for
+		//some reason.
+		$properties = array_filter($properties, function($property) {
+			return isset($this->properties[$property]);
+		});
+
+		// BUG/FIXME? If <D:allprop/> are requested from the client, file
+		// related properties will end up in the list. For whatever reason.
+		// Ignoring them and returning everything does not turn out to work.
+		if(count($properties) === 0) {
+			$properties = array_keys($this->properties);
+		}
+
+		$result = [];
+		foreach($properties as $property) {
+			$getter = $this->properties[$property];
+			if(method_exists($this->comment, $getter)) {
+				$result[$property] = $this->comment->$getter();
+			}
+
+		}
+		return $result;
 	}
 }

@@ -25,6 +25,7 @@ use OCP\Comments\ICommentsManager;
 use OCP\Files\Folder;
 use Sabre\DAV\Exception\MethodNotAllowed;
 use Sabre\DAV\Exception\NotFound;
+use Sabre\DAV\PropPatch;
 
 /**
  * Class EntityCollection
@@ -35,6 +36,8 @@ use Sabre\DAV\Exception\NotFound;
  * @package OCA\DAV\Comments
  */
 class EntityCollection extends Collection {
+	const NS_OWNCLOUD = 'http://owncloud.org/ns';
+
 	/** @var  Folder */
 	protected $fileRoot;
 
@@ -124,7 +127,5 @@ class EntityCollection extends Collection {
 	function childExists($name) {
 
 	}
-
-
 }
 
